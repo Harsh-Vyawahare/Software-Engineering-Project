@@ -1,0 +1,24 @@
+{
+  "name": "SPIT Attend — Smart Attendance System",
+  "short_name": "SPIT Attend",
+  "description": "Smart Attendance Management System for Sardar Patel Institute of Technology, Mumbai",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#7B1113",
+  "theme_color": "#7B1113",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/spit-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/spit-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

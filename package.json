@@ -1,0 +1,21 @@
+{
+  "name": "spit-attend",
+  "version": "2.0.0",
+  "private": true,
+  "description": "SPIT Attend - Smart Attendance Management System v2",
+  "scripts": {
+    "install:all": "cd server && npm install && cd ../client && npm install",
+    "seed": "cd server && npm run prisma:push && npm run prisma:seed",
+    "dev": "concurrently -n \"SERVER,CLIENT\" -c \"cyan,magenta\" \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:tunnel": "concurrently -n \"SERVER,CLIENT,TUNNEL\" -c \"cyan,magenta,yellow\" \"npm run dev:server\" \"npm run dev:client\" \"cloudflared tunnel --url http://localhost:5173\"",
+    "dev:ssl": "concurrently -n \"SERVER,CLIENT\" -c \"cyan,magenta\" \"npm run dev:server\" \"cd client && npm run dev:ssl\"",
+    "tunnel": "cloudflared tunnel --url http://localhost:5173",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "test": "cd server && npm test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.5"
+  }
+}

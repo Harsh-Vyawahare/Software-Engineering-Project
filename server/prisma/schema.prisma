@@ -1,0 +1,272 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String         @id @default(uuid())
+  loginId             String         @unique // UID for student, Employee ID for faculty, ADMIN001 for admin
+  name                String
+  email               String         @unique
+  passwordHash        String
+  role                String         // STUDENT | FACULTY | ADMIN
+  status              String         @default("ACTIVE") // ACTIVE | SUSPENDED | DEACTIVATED
+  failedLoginAttempts Int            @default(0)
+  lockedUntil         DateTime?
+  forcePasswordChange Boolean        @default(true)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  student             Student?
+  faculty             Faculty?
+  notifications       Notification[]
+  auditLogs           AuditLog[]
+}
+
+model Department {
+  id        String     @id @default(uuid())
+  code      String     @unique // e.g. COMP
+  name      String
+  divisions Division[]
+}
+
+model Division {
+  id           String     @id @default(uuid())
+  name         String     // e.g. "TE D"
+  semester     String     // e.g. "AY 2026-27 ODD"
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+  batches      Batch[]
+  students     Student[]
+}
+
+model Batch {
+  id         String    @id @default(uuid())
+  name       String    // e.g. "D1", "D2", "D3", "D4"
+  divisionId String
+  division   Division  @relation(fields: [divisionId], references: [id])
+  students   Student[]
+}
+
+model MdmBatch {
+  id       String    @id @default(uuid())
+  name     String    // e.g. "MDM Batch 1", "MDM Batch 2", "MDM Batch 3"
+  students Student[]
+}
+
+model Student {
+  id                 String               @id
+  user               User                 @relation(fields: [id], references: [id], onDelete: Cascade)
+  rollNumber         String               @unique // UID
+  divisionId         String
+  division           Division             @relation(fields: [divisionId], references: [id])
+  batchId            String
+  batch              Batch                @relation(fields: [batchId], references: [id])
+  mdmElective        String?              // DSA | IOT | null
+  mdmBatchId         String?
+  mdmBatch           MdmBatch?            @relation(fields: [mdmBatchId], references: [id])
+  referencePhotoUrl  String?
+  faceDescriptor     String?              // JSON string of 128-d descriptor array
+  deviceFingerprint  String?
+  deviceBoundAt      DateTime?
+  enrollments        Enrollment[]
+  attendanceRecords  AttendanceRecord[]
+  leaveRequests      LeaveRequest[]
+  photoRequests      PhotoChangeRequest[]
+}
+
+model Faculty {
+  id               String             @id
+  user             User               @relation(fields: [id], references: [id], onDelete: Cascade)
+  employeeId       String             @unique // e.g. SRD, AT, ARN
+  department       String             @default("Computer Engineering")
+  courseSections   CourseSection[]
+  leaveItems       LeaveRequestItem[]
+}
+
+model Subject {
+  id             String          @id @default(uuid())
+  code           String          @unique // DC, SE, AISC, TOC, CNS, MDM-II-DSA, MDM-II-IOT
+  name           String
+  hasTheory      Boolean         @default(true)
+  hasLab         Boolean         @default(false)
+  color          String          @default("#7B1113") // Hex color for badge
+  courseSections CourseSection[]
+}
+
+model Classroom {
+  id             String          @id @default(uuid())
+  name           String          @unique // 609, 508, 203, 603-3, etc.
+  latitude       Float           @default(19.1232)
+  longitude      Float           @default(72.8363)
+  allowedRadiusM Float           @default(100.0)
+  courseSections CourseSection[]
+}
+
+model CourseSection {
+  id           String              @id @default(uuid())
+  subjectId    String
+  subject      Subject             @relation(fields: [subjectId], references: [id])
+  type         String              // LECTURE | LAB
+  audienceType String              // DIVISION | BATCH | ELECTIVE | ELECTIVE_BATCH
+  audienceRef  String              // "TE D", "D1", "D2", "DSA", "MDM1", etc.
+  facultyId    String
+  faculty      Faculty             @relation(fields: [facultyId], references: [id])
+  classroomId  String
+  classroom    Classroom           @relation(fields: [classroomId], references: [id])
+  dayOfWeek    String              // MONDAY | TUESDAY | WEDNESDAY | THURSDAY | FRIDAY
+  startTime    String              // "09:00", "11:15", "13:15", etc.
+  endTime      String              // "11:00", "12:15", etc.
+  isPlaceholder Boolean            @default(false)
+
+  enrollments  Enrollment[]
+  sessions     AttendanceSession[]
+  leaveItems   LeaveRequestItem[]
+}
+
+model Enrollment {
+  id              String        @id @default(uuid())
+  studentId       String
+  student         Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseSectionId String
+  courseSection   CourseSection @relation(fields: [courseSectionId], references: [id], onDelete: Cascade)
+  isAutoDerived   Boolean       @default(true)
+  enrolledAt      DateTime      @default(now())
+
+  @@unique([studentId, courseSectionId])
+}
+
+model AttendanceSession {
+  id              String             @id @default(uuid())
+  courseSectionId String
+  courseSection   CourseSection      @relation(fields: [courseSectionId], references: [id])
+  date            String             // YYYY-MM-DD
+  startTime       DateTime
+  endTime         DateTime?
+  status          String             @default("OPEN") // OPEN | CLOSED | CANCELLED
+  qrSecret        String             // Secret used to sign rotating QR
+  qrCurrentToken  String             // Current valid token
+  qrRotatedAt     DateTime           @default(now())
+  records         AttendanceRecord[]
+
+  @@unique([courseSectionId, date]) // FR-SESS-02: Prevent duplicate sessions for same period on same date
+}
+
+model AttendanceRecord {
+  id             String            @id @default(uuid())
+  sessionId      String
+  session        AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  studentId      String
+  student        Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  status         String            // PRESENT | ABSENT | EXCUSED
+  method         String            // QR_VERIFIED | MANUAL
+  gpsVerified    Boolean           @default(false)
+  gpsDistanceM   Float?
+  faceScore      Float?            // Similarity percentage (e.g. 88.5)
+  timestamp      DateTime          @default(now())
+  manualReason   String?
+  manualMarkedBy String?
+  isArchived     Boolean           @default(false)
+
+  @@unique([sessionId, studentId]) // REL-01, BR-13, CO-4: A student can never be marked Present twice
+}
+
+model LeaveRequest {
+  id            String             @id @default(uuid())
+  studentId     String
+  student       Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  startDate     String             // YYYY-MM-DD
+  endDate       String             // YYYY-MM-DD
+  reason        String
+  attachmentUrl String?
+  status        String             @default("PENDING") // PENDING | PARTIALLY_APPROVED | APPROVED | REJECTED | WITHDRAWN
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  items         LeaveRequestItem[]
+}
+
+model LeaveRequestItem {
+  id              String        @id @default(uuid())
+  leaveRequestId  String
+  leaveRequest    LeaveRequest  @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
+  courseSectionId String
+  courseSection   CourseSection @relation(fields: [courseSectionId], references: [id])
+  sessionDate     String        // YYYY-MM-DD
+  facultyId       String
+  faculty         Faculty       @relation(fields: [facultyId], references: [id])
+  status          String        @default("PENDING") // PENDING | APPROVED | REJECTED
+  comment         String?
+  reviewedAt      DateTime?
+}
+
+model PhotoChangeRequest {
+  id             String   @id @default(uuid())
+  studentId      String
+  student        Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  photoUrl       String
+  faceDescriptor String   // JSON 128-d descriptor
+  status         String   @default("PENDING") // PENDING | APPROVED | REJECTED
+  reason         String?
+  reviewedBy     String?
+  createdAt      DateTime @default(now())
+}
+
+model Holiday {
+  id          String   @id @default(uuid())
+  date        String   @unique // YYYY-MM-DD
+  title       String
+  description String?
+  createdAt   DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  actorName  String?
+  action     String   // AUTH_LOGIN, ATTENDANCE_OVERRIDE, MANUAL_MARK, SETTINGS_UPDATE, etc.
+  targetType String
+  targetId   String?
+  details    String?  // JSON diff or description
+  ipAddress  String?
+  timestamp  DateTime @default(now())
+  user       User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+}
+
+model Setting {
+  id                            String   @id @default("global_settings")
+  minAttendanceThreshold        Float    @default(75.0)  // BR-1, FR-ADM-03
+  qrValiditySeconds             Int      @default(60)    // BR-10, FR-ADM-03
+  gpsRadiusMeters               Float    @default(100.0) // BR-11, FR-ADM-03
+  faceMatchThreshold            Float    @default(80.0)  // BR-12, FR-ADM-03
+  excludeExcusedFromDenominator Boolean  @default(true)
+  demoMode                      Boolean  @default(false)
+  demoSimulatedDate             String?  // YYYY-MM-DD
+  demoSimulatedTime             String?  // HH:MM
+  demoMockGps                   Boolean  @default(false)
+  updatedAt                     DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   // SESSION_STARTED | ATTENDANCE_MARKED | LEAVE_STATUS | LOW_ATTENDANCE | ANNOUNCEMENT
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Announcement {
+  id           String   @id @default(uuid())
+  title        String
+  content      String
+  audienceType String   @default("ALL") // ALL | DIVISION | BATCH | SUBJECT
+  audienceRef  String?
+  createdById  String
+  createdAt    DateTime @default(now())
+}
