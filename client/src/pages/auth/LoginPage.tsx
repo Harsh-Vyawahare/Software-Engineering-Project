@@ -3,7 +3,6 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
 import { GraduationCap, Briefcase, Shield, Eye, EyeOff, Lock, User, AlertCircle, Sparkles } from 'lucide-react';
 import spitLogo from '../../assets/spit-logo.png';
-import { DemoToolbar } from '../../components/common/DemoToolbar.js';
 
 export const LoginPage: React.FC = () => {
   const [selectedRole, setSelectedRole] = useState<'STUDENT' | 'FACULTY' | 'ADMIN'>('STUDENT');
@@ -52,8 +51,6 @@ export const LoginPage: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col justify-center bg-slate-50 dark:bg-slate-950 transition-colors relative">
-      <DemoToolbar />
-
       <div className="w-full max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-16">
         {/* Left Hero (Desktop) */}
         <div className="w-full lg:w-1/2 flex flex-col items-center lg:items-start text-center lg:text-left space-y-6">

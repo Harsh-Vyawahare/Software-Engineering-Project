@@ -71,6 +71,14 @@ export const AppHeader: React.FC = () => {
           {/* User pill & Role */}
           {user && (
             <div className="flex items-center gap-3 pl-2 border-l border-slate-200 dark:border-slate-800">
+              {user.student?.referencePhotoUrl ? (
+                <img
+                  src={user.student.referencePhotoUrl}
+                  alt={user.name}
+                  className="w-8 h-8 rounded-full object-cover border-2 border-spit-maroon-600 dark:border-rose-400 shadow-sm"
+                />
+              ) : null}
+
               <div className="hidden md:flex flex-col items-end">
                 <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{user.name}</span>
                 {user.student ? (
@@ -88,10 +96,11 @@ export const AppHeader: React.FC = () => {
 
               <button
                 onClick={() => logout()}
-                className="p-2 rounded-xl text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
-                title="Logout"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900 text-xs font-bold transition-all shadow-sm active:scale-95 hover:shadow"
+                title="Log out and return to login page"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Logout</span>
               </button>
             </div>
           )}

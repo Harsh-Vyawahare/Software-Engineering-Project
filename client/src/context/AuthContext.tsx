@@ -66,8 +66,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       await apiRequest('/auth/logout', { method: 'POST' });
+    } catch (e) {
+      console.error(e);
     } finally {
       setUser(null);
+      window.location.href = '/login';
     }
   };
 

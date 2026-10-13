@@ -38,14 +38,20 @@ export const FacultyLiveSessionPage: React.FC = () => {
   const [manualSubmitting, setManualSubmitting] = useState(false);
   const [manualError, setManualError] = useState<string | null>(null);
 
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   const fetchSession = async () => {
     if (!sessionId) return;
     try {
+      setErrorMsg(null);
       const res = await apiRequest(`/faculty/sessions/${sessionId}`);
       setData(res);
-      generateQrImage(res.session.qrCurrentToken);
-    } catch (err) {
-      console.error(err);
+      if (res?.session?.qrCurrentToken) {
+        generateQrImage(res.session.qrCurrentToken);
+      }
+    } catch (err: any) {
+      console.error('Error fetching live session:', err);
+      setErrorMsg(err.message || 'Unable to retrieve session details.');
     } finally {
       setLoading(false);
     }
@@ -207,11 +213,51 @@ export const FacultyLiveSessionPage: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="space-y-4 animate-pulse"><div className="h-72 bg-slate-200 dark:bg-slate-800 rounded-3xl" /></div>;
+    return (
+      <div className="max-w-6xl mx-auto space-y-6 animate-pulse">
+        <div className="h-32 bg-slate-200 dark:bg-slate-800 rounded-3xl" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="h-96 bg-slate-200 dark:bg-slate-800 rounded-3xl" />
+          <div className="h-96 lg:col-span-2 bg-slate-200 dark:bg-slate-800 rounded-3xl" />
+        </div>
+      </div>
+    );
   }
 
   const session = data?.session;
   const counts = data?.counts;
+
+  if (!session) {
+    return (
+      <div className="max-w-md mx-auto my-12 p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl text-center space-y-4 animate-in fade-in">
+        <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-100 dark:bg-amber-950/60 flex items-center justify-center text-amber-600 dark:text-amber-400">
+          <AlertCircle className="w-7 h-7" />
+        </div>
+        <h2 className="text-xl font-black text-slate-900 dark:text-slate-100">Attendance Session Notice</h2>
+        <p className="text-xs text-slate-600 dark:text-slate-400">
+          {errorMsg || 'Session not found or unavailable. Please return to your faculty dashboard.'}
+        </p>
+        <div className="flex gap-2 justify-center pt-2">
+          <button
+            onClick={() => {
+              setLoading(true);
+              fetchSession();
+            }}
+            className="px-4 py-2 rounded-xl text-xs font-bold border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+          >
+            Try Again
+          </button>
+          <button
+            onClick={() => navigate('/faculty')}
+            className="px-4 py-2 rounded-xl text-xs font-bold bg-spit-maroon-700 hover:bg-spit-maroon-800 text-white shadow transition"
+          >
+            Return to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const roster = (data?.roster || []).filter((st: any) =>
     st.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     st.rollNumber.includes(searchQuery)
@@ -293,8 +339,15 @@ export const FacultyLiveSessionPage: React.FC = () => {
 
             {/* Circular Countdown Progress Ring */}
             <div className="relative">
-              <div className="p-3 bg-white rounded-2xl border-4 border-spit-maroon-100 shadow-md">
-                {qrDataUrl && <img src={qrDataUrl} alt="Session QR" className="w-56 h-56 object-contain" />}
+              <div className="p-3 bg-white rounded-2xl border-4 border-spit-maroon-100 shadow-md flex items-center justify-center min-w-[240px] min-h-[240px]">
+                {qrDataUrl ? (
+                  <img src={qrDataUrl} alt="Session QR" className="w-56 h-56 object-contain" />
+                ) : (
+                  <div className="flex flex-col items-center justify-center gap-2 py-8 text-slate-400">
+                    <div className="w-8 h-8 border-3 border-spit-maroon-600 border-t-transparent rounded-full animate-spin" />
+                    <span className="text-xs font-semibold text-slate-500">Generating QR...</span>
+                  </div>
+                )}
               </div>
 
               <div className="mt-3 flex items-center justify-center gap-1.5 text-xs font-bold text-spit-maroon-700 dark:text-rose-400">
@@ -427,8 +480,15 @@ export const FacultyLiveSessionPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="p-6 bg-white rounded-3xl shadow-2xl border-8 border-rose-600">
-            {qrDataUrl && <img src={qrDataUrl} alt="Projector QR" className="w-80 h-80 object-contain" />}
+          <div className="p-6 bg-white rounded-3xl shadow-2xl border-8 border-rose-600 flex items-center justify-center min-w-[340px] min-h-[340px]">
+            {qrDataUrl ? (
+              <img src={qrDataUrl} alt="Projector QR" className="w-80 h-80 object-contain" />
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-3 py-12 text-slate-400">
+                <div className="w-12 h-12 border-4 border-rose-600 border-t-transparent rounded-full animate-spin" />
+                <span className="text-sm font-bold text-slate-600">Generating Projector QR...</span>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2 text-sm font-bold text-amber-400">

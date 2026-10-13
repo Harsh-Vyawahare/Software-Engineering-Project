@@ -1,10 +1,10 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.js';
-import { Home, BookOpen, QrCode, FileText, User, Radio, FileSpreadsheet, Users, Settings } from 'lucide-react';
+import { Home, BookOpen, QrCode, FileText, User, Radio, FileSpreadsheet, Users, Settings, LogOut } from 'lucide-react';
 
 export const MobileNavbar: React.FC = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   if (!user) return null;
 
   let links: Array<{ to: string; label: string; icon: any; highlight?: boolean }> = [];
@@ -71,6 +71,16 @@ export const MobileNavbar: React.FC = () => {
             </NavLink>
           );
         })}
+
+        <button
+          type="button"
+          onClick={() => logout()}
+          className="flex flex-col items-center py-1 px-2.5 rounded-xl text-rose-600 hover:text-rose-700 dark:text-rose-400 active:scale-95 transition-all"
+          title="Sign out and return to login page"
+        >
+          <LogOut className="w-5 h-5 mb-0.5 text-rose-600 dark:text-rose-400" />
+          <span className="text-[10px] font-black text-rose-600 dark:text-rose-400">Logout</span>
+        </button>
       </div>
     </nav>
   );

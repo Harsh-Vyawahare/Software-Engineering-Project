@@ -15,10 +15,11 @@ import {
   ShieldAlert,
   ClipboardList,
   MapPin,
+  LogOut,
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   if (!user) return null;
 
   let navItems: Array<{ to: string; label: string; icon: any }> = [];
@@ -95,6 +96,18 @@ export const Sidebar: React.FC = () => {
           );
         })}
       </nav>
+
+      {/* Bottom Logout Button */}
+      <div className="pt-4 mt-auto border-t border-slate-200 dark:border-slate-800">
+        <button
+          onClick={() => logout()}
+          className="flex items-center justify-center gap-2.5 w-full px-3.5 py-2.5 rounded-xl text-xs font-extrabold text-rose-700 hover:text-white dark:text-rose-300 bg-rose-50 hover:bg-rose-600 dark:bg-rose-950/40 dark:hover:bg-rose-600 border border-rose-200 dark:border-rose-900 transition-all shadow-sm active:scale-95 group"
+          title="Sign out and return to login page"
+        >
+          <LogOut className="w-4 h-4 group-hover:scale-110 transition-transform" />
+          <span>Log Out to Login Page</span>
+        </button>
+      </div>
     </aside>
   );
 };

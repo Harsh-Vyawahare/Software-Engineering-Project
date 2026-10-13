@@ -108,9 +108,53 @@ export class FacultyController {
     });
     const openSessionMap = new Map(openSessions.map((os) => [os.courseSectionId, os.id]));
 
+    // 5 Key Subjects requested by user: AISC, DC, SE, CNS, TOC
+    const targetCodes = ['AISC', 'DC', 'SE', 'CNS', 'TOC'];
+    const quickLaunchSubjects: any[] = [];
+
+    for (const code of targetCodes) {
+      const sec = await prisma.courseSection.findFirst({
+        where: {
+          subject: { code },
+          isPlaceholder: false,
+        },
+        include: {
+          subject: true,
+          classroom: true,
+          enrollments: true,
+        },
+        orderBy: [
+          { audienceType: 'asc' }, // prefers DIVISION over BATCH
+          { startTime: 'asc' },
+        ],
+      });
+
+      if (sec) {
+        const openSess = await prisma.attendanceSession.findFirst({
+          where: {
+            courseSectionId: sec.id,
+            status: 'OPEN',
+          },
+        });
+
+        quickLaunchSubjects.push({
+          code: sec.subject.code,
+          name: sec.subject.name,
+          color: sec.subject.color,
+          sectionId: sec.id,
+          audienceRef: sec.audienceRef,
+          type: sec.type,
+          classroomName: sec.classroom.name,
+          enrolledCount: sec.enrollments.length,
+          openSessionId: openSess?.id || null,
+        });
+      }
+    }
+
     return res.json({
       todaySessions: todayCards,
       pendingLeaveCount,
+      quickLaunchSubjects,
       allAssignedSections: sections.map((s) => ({
         id: s.id,
         subjectName: s.subject.name,
@@ -134,10 +178,42 @@ export class FacultyController {
    */
   async startSession(req: Request, res: Response): Promise<any> {
     const facultyId = req.user?.id;
-    const { courseSectionId, customDate } = req.body;
+    let { courseSectionId, subjectCode, customDate } = req.body;
 
     if (!facultyId) return res.status(401).json({ message: 'Unauthorized' });
-    if (!courseSectionId) return res.status(400).json({ message: 'courseSectionId is required' });
+
+    if (!courseSectionId && subjectCode) {
+      // First try to find section for this subject that belongs to current faculty
+      let sec = await prisma.courseSection.findFirst({
+        where: {
+          subject: { code: subjectCode },
+          facultyId: facultyId,
+          isPlaceholder: false,
+        },
+        orderBy: [
+          { audienceType: 'asc' },
+          { startTime: 'asc' },
+        ],
+      });
+      // If none found specifically for this faculty, pick any active section for this subject
+      if (!sec) {
+        sec = await prisma.courseSection.findFirst({
+          where: {
+            subject: { code: subjectCode },
+            isPlaceholder: false,
+          },
+          orderBy: [
+            { audienceType: 'asc' },
+            { startTime: 'asc' },
+          ],
+        });
+      }
+      if (sec) {
+        courseSectionId = sec.id;
+      }
+    }
+
+    if (!courseSectionId) return res.status(400).json({ message: 'courseSectionId or subjectCode is required' });
 
     try {
       const session = await sessionService.startSession(courseSectionId, facultyId, customDate);
@@ -178,7 +254,13 @@ export class FacultyController {
     });
 
     if (!session) return res.status(404).json({ message: 'Session not found' });
-    if (session.courseSection.facultyId !== facultyId) {
+
+    const settings = await prisma.setting.findUnique({ where: { id: 'global_settings' } });
+    const isDemoMode = settings?.demoMode ?? true;
+
+    // Allow if session belongs to this faculty, or in demo mode, or if user is faculty/admin
+    const isOwner = session.courseSection.facultyId === facultyId;
+    if (!isOwner && !isDemoMode && req.user?.role !== 'FACULTY' && req.user?.role !== 'ADMIN') {
       return res.status(403).json({ message: 'Unauthorized: Session belongs to another faculty' });
     }
 

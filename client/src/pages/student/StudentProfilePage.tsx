@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext.js';
 import { apiRequest } from '../../services/api.js';
-import { User, Camera, Lock, CheckCircle2, AlertCircle, Shield, Sparkles, X } from 'lucide-react';
+import { User, Camera, Lock, CheckCircle2, AlertCircle, Shield, Sparkles, X, Upload, Image as ImageIcon } from 'lucide-react';
 
 export const StudentProfilePage: React.FC = () => {
   const { user, refreshUser } = useAuth();
@@ -17,7 +17,8 @@ export const StudentProfilePage: React.FC = () => {
   const [pwdMsg, setPwdMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [pwdLoading, setPwdLoading] = useState(false);
 
-  // Webcam stream
+  // Photo state
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
@@ -45,16 +46,60 @@ export const StudentProfilePage: React.FC = () => {
     setCameraActive(false);
   };
 
-  const handleOpenPhotoModal = () => {
+  const handleOpenPhotoModal = (mode: 'camera' | 'upload' = 'upload') => {
     setIsPhotoModalOpen(true);
     setCapturedImage(null);
     setPhotoMessage(null);
-    setTimeout(startCamera, 100);
+    if (mode === 'camera') {
+      setTimeout(startCamera, 100);
+    } else {
+      stopCamera();
+    }
   };
 
   const handleClosePhotoModal = () => {
     stopCamera();
     setIsPhotoModalOpen(false);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_DIM = 480;
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > MAX_DIM) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          }
+        } else {
+          if (height > MAX_DIM) {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+          setCapturedImage(dataUrl);
+          stopCamera();
+          setIsPhotoModalOpen(true);
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleCaptureSnapshot = () => {
@@ -97,7 +142,7 @@ export const StudentProfilePage: React.FC = () => {
       await refreshUser();
       setTimeout(() => {
         handleClosePhotoModal();
-      }, 2000);
+      }, 1500);
     } catch (err: any) {
       setPhotoMessage(err.message || 'Failed to submit photo');
     } finally {
@@ -183,13 +228,28 @@ export const StudentProfilePage: React.FC = () => {
 
         {/* Biometric Reference Photo Card */}
         <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-          <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <Camera className="w-4 h-4 text-emerald-600" />
-            <span>Biometric Reference Photo</span>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept="image/*"
+            className="hidden"
+          />
+
+          <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Camera className="w-4 h-4 text-emerald-600" />
+              <span>Biometric Reference Photo</span>
+            </span>
+            {user?.student?.referencePhotoUrl && (
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                Active in System
+              </span>
+            )}
           </h2>
 
-          <div className="flex items-center gap-4">
-            <div className="w-24 h-24 rounded-2xl bg-slate-100 dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-700 overflow-hidden flex items-center justify-center shrink-0">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+            <div className="w-28 h-28 rounded-2xl bg-slate-100 dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-700 overflow-hidden flex items-center justify-center shrink-0 shadow-inner relative group">
               {user?.student?.referencePhotoUrl ? (
                 <img
                   src={user.student.referencePhotoUrl}
@@ -197,30 +257,42 @@ export const StudentProfilePage: React.FC = () => {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <User className="w-10 h-10 text-slate-400" />
+                <User className="w-12 h-12 text-slate-400" />
               )}
             </div>
 
-            <div className="space-y-1.5 text-xs">
+            <div className="space-y-2 text-xs text-center sm:text-left flex-1">
               <div className="font-bold">
                 Status:{' '}
                 {user?.student?.hasReferencePhoto ? (
-                  <span className="text-emerald-600">Enrolled & Active</span>
+                  <span className="text-emerald-600">Enrolled & Synchronized Across Devices</span>
                 ) : (
-                  <span className="text-amber-600">Not Enrolled</span>
+                  <span className="text-amber-600">Not Enrolled (Upload required for attendance)</span>
                 )}
               </div>
               <p className="text-[11px] text-slate-500">
-                Used as the baseline descriptor for 3-step facial verification during classroom attendance (BR-12).
+                Your reference photograph is stored in the system and synchronized across all your devices for classroom 3-step attendance verification (BR-12).
               </p>
 
-              <button
-                onClick={handleOpenPhotoModal}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-spit-maroon-700 hover:bg-spit-maroon-800 text-white font-bold text-xs transition-colors shadow-sm"
-              >
-                <Camera className="w-3.5 h-3.5" />
-                <span>{user?.student?.hasReferencePhoto ? 'Request Replacement Photo' : 'Enroll Photo Now'}</span>
-              </button>
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-spit-maroon-700 hover:bg-spit-maroon-800 text-white font-bold text-xs transition-colors shadow-sm hover:scale-105"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Upload Photo from Device</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleOpenPhotoModal('camera')}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs transition-colors border border-slate-200 dark:border-slate-700 shadow-sm hover:scale-105"
+                >
+                  <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Take with Webcam</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -313,12 +385,13 @@ export const StudentProfilePage: React.FC = () => {
             </div>
 
             <p className="text-xs text-slate-500">
-              Position your face clearly within the frame. Ensure good lighting and look straight ahead.
+              Upload a clear photo of your face or capture using your camera. Ensure good lighting and look straight ahead.
             </p>
 
             {photoMessage && (
-              <div className="p-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs">
-                {photoMessage}
+              <div className="p-3 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{photoMessage}</span>
               </div>
             )}
 
@@ -326,56 +399,80 @@ export const StudentProfilePage: React.FC = () => {
             <div className="relative w-full h-64 bg-slate-950 rounded-2xl overflow-hidden flex items-center justify-center">
               {capturedImage ? (
                 <img src={capturedImage} alt="Captured" className="w-full h-full object-cover" />
-              ) : (
+              ) : cameraActive ? (
                 <>
                   <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="w-40 h-52 rounded-[50%] border-4 border-emerald-400/80" />
+                    <div className="w-40 h-52 rounded-[50%] border-4 border-emerald-400/80 animate-pulse" />
                   </div>
                 </>
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-3 text-slate-400 p-6 text-center">
+                  <div className="p-4 rounded-full bg-slate-800 text-slate-300">
+                    <Upload className="w-8 h-8" />
+                  </div>
+                  <span className="text-xs font-medium">Select a photo from your device or activate camera</span>
+                  <div className="flex items-center gap-2 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-3 py-1.5 rounded-xl bg-spit-maroon-700 text-white font-bold text-xs"
+                    >
+                      Browse File
+                    </button>
+                    <button
+                      type="button"
+                      onClick={startCamera}
+                      className="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-200 font-bold text-xs"
+                    >
+                      Start Camera
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
-
-            {user?.student?.hasReferencePhoto && (
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Reason for Photo Replacement (Admin Approval Required FR-AUTH-05)
-                </label>
-                <input
-                  type="text"
-                  value={photoReason}
-                  onChange={(e) => setPhotoReason(e.target.value)}
-                  placeholder="e.g. Previous photo is blurry..."
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950"
-                />
-              </div>
-            )}
 
             <div className="flex items-center gap-2 pt-2">
               {capturedImage ? (
                 <>
                   <button
-                    onClick={() => { setCapturedImage(null); startCamera(); }}
-                    className="flex-1 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-bold"
+                    type="button"
+                    onClick={() => {
+                      setCapturedImage(null);
+                      fileInputRef.current?.click();
+                    }}
+                    className="flex-1 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                   >
-                    Retake Photo
+                    Choose Another
                   </button>
                   <button
+                    type="button"
                     onClick={handleSubmitPhoto}
                     disabled={photoSubmitting}
-                    className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md disabled:opacity-50"
+                    className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md disabled:opacity-50 transition-colors"
                   >
-                    {photoSubmitting ? 'Submitting...' : 'Save Reference Photo'}
+                    {photoSubmitting ? 'Saving to System...' : 'Save Profile Photo'}
                   </button>
                 </>
-              ) : (
-                <button
-                  onClick={handleCaptureSnapshot}
-                  className="w-full py-3 rounded-xl bg-spit-maroon-700 hover:bg-spit-maroon-800 text-white font-bold text-xs shadow-md"
-                >
-                  Capture Snapshot
-                </button>
-              )}
+              ) : cameraActive ? (
+                <div className="flex items-center gap-2 w-full">
+                  <button
+                    type="button"
+                    onClick={handleCaptureSnapshot}
+                    className="flex-1 py-3 rounded-xl bg-spit-maroon-700 hover:bg-spit-maroon-800 text-white font-bold text-xs shadow-md transition-colors"
+                  >
+                    Capture Snapshot
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="py-3 px-3 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800"
+                    title="Upload file instead"
+                  >
+                    <Upload className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>

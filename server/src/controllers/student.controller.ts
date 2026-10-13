@@ -181,48 +181,30 @@ export class StudentController {
     const student = await prisma.student.findUnique({ where: { id: studentId } });
     if (!student) return res.status(404).json({ message: 'Student not found' });
 
-    // If student has NO existing photo -> auto-approve initial setup
-    if (!student.referencePhotoUrl) {
-      await prisma.student.update({
-        where: { id: studentId },
-        data: {
-          referencePhotoUrl: photoUrl,
-          faceDescriptor: JSON.stringify(faceDescriptor),
-        },
-      });
-
-      await prisma.auditLog.create({
-        data: {
-          actorId: studentId,
-          actorName: req.user?.name,
-          action: 'STUDENT_INITIAL_PHOTO_ENROLL',
-          targetType: 'STUDENT',
-          targetId: studentId,
-          details: 'Initial biometric photo enrolled and auto-approved',
-        },
-      });
-
-      return res.json({
-        message: 'Biometric reference photo enrolled successfully! Attendance verification is now enabled.',
-        autoApproved: true,
-      });
-    }
-
-    // Subsequent photo change requires Admin Approval (FR-AUTH-05)
-    const request = await prisma.photoChangeRequest.create({
+    // Save reference photo directly on the student record in the system
+    await prisma.student.update({
+      where: { id: studentId },
       data: {
-        studentId,
-        photoUrl,
+        referencePhotoUrl: photoUrl,
         faceDescriptor: JSON.stringify(faceDescriptor),
-        status: 'PENDING',
-        reason: req.body.reason || 'User requested photo update',
+      },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        actorId: studentId,
+        actorName: req.user?.name,
+        action: 'STUDENT_PHOTO_UPDATE',
+        targetType: 'STUDENT',
+        targetId: studentId,
+        details: 'Biometric reference photo enrolled/updated and saved to student profile',
       },
     });
 
     return res.json({
-      message: 'Photo change request submitted. It will be applied once approved by the Administrator (FR-AUTH-05).',
-      requestId: request.id,
-      autoApproved: false,
+      message: 'Biometric reference photo saved successfully! Your profile is updated in the system and active across all devices.',
+      autoApproved: true,
+      referencePhotoUrl: photoUrl,
     });
   }
 

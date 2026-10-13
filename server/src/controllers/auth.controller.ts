@@ -157,12 +157,14 @@ export class AuthController {
         forcePasswordChange: user.forcePasswordChange,
         student: user.student
           ? {
+              id: user.student.id,
               rollNumber: user.student.rollNumber,
               division: user.student.division.name,
               batch: user.student.batch.name,
               mdmElective: user.student.mdmElective,
               mdmBatch: user.student.mdmBatch?.name,
               hasReferencePhoto: !!user.student.referencePhotoUrl,
+              referencePhotoUrl: user.student.referencePhotoUrl,
             }
           : undefined,
         faculty: user.faculty

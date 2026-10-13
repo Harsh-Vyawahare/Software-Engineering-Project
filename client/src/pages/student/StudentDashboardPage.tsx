@@ -77,13 +77,22 @@ export const StudentDashboardPage: React.FC = () => {
     <div className="space-y-8 max-w-6xl mx-auto">
       {/* 1. Header greeting & Student Chip */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
-            Good day, {user?.name?.split(' ')[0]} 👋
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Welcome to SPIT Attend · Academic Year 2026-27 ODD Semester
-          </p>
+        <div className="flex items-center gap-3.5">
+          {user?.student?.referencePhotoUrl && (
+            <img
+              src={user.student.referencePhotoUrl}
+              alt={user.name}
+              className="w-12 h-12 rounded-2xl object-cover border-2 border-spit-maroon-600 dark:border-rose-400 shadow-md shrink-0"
+            />
+          )}
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
+              Good day, {user?.name?.split(' ')[0]} 👋
+            </h1>
+            <p className="text-xs text-slate-500 mt-1">
+              Welcome to SPIT Attend · Academic Year 2026-27 ODD Semester
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">

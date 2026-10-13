@@ -3,6 +3,10 @@ import { apiRequest } from '../../services/api.js';
 import { Play, RotateCcw, Mail, MapPin, Calendar, Clock, Sparkles, X, CheckCircle, AlertTriangle } from 'lucide-react';
 
 export const DemoToolbar: React.FC = () => {
+  return null;
+};
+
+const _unusedDemoToolbar: React.FC = () => {
   const [settings, setSettings] = useState<any>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isMailboxOpen, setIsMailboxOpen] = useState(false);

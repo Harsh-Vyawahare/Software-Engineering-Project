@@ -4,13 +4,13 @@
   "description": "Backend API & Realtime Server for SPIT Attend",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "node node_modules/tsx/dist/cli.mjs watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "prisma:generate": "prisma generate",
-    "prisma:push": "prisma db push",
-    "prisma:seed": "tsx src/seed.ts",
-    "test": "tsx tests/seed-verification.test.ts"
+    "prisma:generate": "node node_modules/prisma/build/index.js generate",
+    "prisma:push": "node node_modules/prisma/build/index.js db push",
+    "prisma:seed": "node node_modules/tsx/dist/cli.mjs src/seed.ts",
+    "test": "node node_modules/tsx/dist/cli.mjs tests/seed-verification.test.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.4.0",
