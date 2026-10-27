@@ -1,4 +1,4 @@
-# SPIT Attend — Smart Attendance Management System (v2)
+# SPIT Attendance Portal— Smart Attendance Management System
 
 **Sardar Patel Institute of Technology (SPIT), Mumbai**  
 *Autonomous Institute Affiliated to the University of Mumbai*  
